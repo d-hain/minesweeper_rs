@@ -51,14 +51,39 @@ impl Field {
         }
     }
 
+    fn in_field(&self, pos: Point2) -> bool {
+        (pos.x as u8) < MAX_COLS && (pos.y as u8) < MAX_ROWS
+    }
+
+    fn get_neighbor_positions(&self, pos: &Point2) -> Vec<Point2> {
+        let mut neighbor_positions = vec![];
+        for offset_y in -1..2 {
+            for offset_x in -1..2 {
+                let neighbor = *pos + Point2::new(offset_x as f32, offset_y as f32);
+                if self.in_field(neighbor) {
+                    neighbor_positions.push(neighbor);
+                }
+            }
+        }
+        neighbor_positions
+    }
+
     /// Reveals the given points Field
     /// @return If cells is a bomb
-    pub fn reveal(&mut self, pos: Point2) -> bool{
-        let mut cell = self.get(pos);
+    pub fn reveal(&mut self, pos: &Point2) -> bool{
+        let mut cell = self.get(*pos);
         cell.is_revealed = true;
-
-        cell.is_bomb
+        if cell.bomb_count > 0 {
+            return cell.is_bomb;
+        } else {
+            for neighbor_pos in self.get_neighbor_positions(&pos).iter() {
+                self.reveal(neighbor_pos);
+            }
+        }
+        false
     }
+
+
 
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
         let mut bombs = 0;
