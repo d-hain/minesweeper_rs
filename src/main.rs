@@ -1,4 +1,9 @@
 use nannou::prelude::*;
+use rand::Rng;
+
+const MAX_ROWS: u8 = 10;
+const MAX_COLS: u8 = 10;
+const BOMB_COUNT: u8 = 10;
 
 #[derive(Default, Clone, Copy, Debug)]
 struct Cell {
@@ -25,6 +30,21 @@ impl Field {
         let field = vec![vec![Cell::new(false); cols as usize];rows as usize];
 
         Self(field)
+    }
+
+    fn place_bombs(&mut self, bomb_count: u8) {
+        let mut rand_y;
+        let mut rand_x;
+        let mut cell;
+        for _ in 0..bomb_count {
+            loop {
+                rand_y = rand::thread_rng().gen_range(0..self.0.len());
+                rand_x = rand::thread_rng().gen_range(0..self.0[0].len());
+                cell = &mut self.0[rand_y][rand_x];
+                if !cell.is_bomb {break}
+            }
+            cell.is_bomb = true;
+        }
     }
 
     /// Reveals the given points Field
@@ -58,6 +78,9 @@ impl Field {
 }
 
 fn main() {
+    let mut field = Field::empty(MAX_ROWS, MAX_COLS);
+    field.place_bombs(BOMB_COUNT);
+    dbg!(field);
     nannou::sketch(view).run()
 }
 
