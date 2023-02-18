@@ -1,3 +1,4 @@
+use nannou::image::Rgb;
 use nannou::prelude::*;
 use rand::Rng;
 
@@ -23,16 +24,17 @@ impl Cell {
 }
 
 #[derive(Debug, Clone)]
-struct Field (Vec<Vec<Cell>>);
+struct Field(Vec<Vec<Cell>>);
 
 impl Field {
+    /// Create an empty [`Field`] without any bombs.
     pub fn empty(rows: u8, cols: u8) -> Self {
-        let field = vec![vec![Cell::new(false); cols as usize];rows as usize];
+        let field = vec![vec![Cell::new(false); cols as usize]; rows as usize];
 
         Self(field)
     }
 
-    fn get(&self, pos: Point2) -> Cell{
+    fn get(&self, pos: Point2) -> Cell {
         self.0[pos.y as usize][pos.x as usize]
     }
 
@@ -45,15 +47,18 @@ impl Field {
                 rand_y = rand::thread_rng().gen_range(0..self.0.len());
                 rand_x = rand::thread_rng().gen_range(0..self.0[0].len());
                 cell = &mut self.0[rand_y][rand_x];
-                if !cell.is_bomb {break}
+                if !cell.is_bomb { break; }
             }
             cell.is_bomb = true;
         }
     }
 
-    /// Reveals the given points Field
-    /// @return If cells is a bomb
-    pub fn reveal(&mut self, pos: Point2) -> bool{
+    /// Reveals the given [`Point2`] in the [`Field`].
+    ///
+    /// # Returns
+    ///
+    /// if the [`Cell`] is a bomb
+    pub fn reveal(&mut self, pos: Point2) -> bool {
         let mut cell = self.get(pos);
         cell.is_revealed = true;
 
@@ -105,29 +110,78 @@ impl Field {
     fn set_bomb_counts(&mut self) {
         let mut field = self.clone();
         for (y, row) in field.0.iter_mut().enumerate() {
-            for (x,  cell) in row.iter_mut().enumerate() {
+            for (x, cell) in row.iter_mut().enumerate() {
                 cell.bomb_count = self.count_surrounding_bombs(Point2::new(x as f32, y as f32));
+            }
+        }
+    }
+
+    /// Draw the [`Field`] in the middle of the `draw`.
+    pub fn draw(&self, window_rect: &Rect, draw: &Draw) {
+        let cell_width = window_rect.w() / (self.0.len() as f32 * 2.0);
+        let cell_height = window_rect.h() / (self.0.len() as f32 * 2.0);
+        let padding_x = cell_width / 4.0;
+        let padding_y = cell_height / 4.0;
+        let field_width = cell_width * self.0.len() as f32 + padding_x * (self.0.len() as f32 - 1.0);
+        let field_height = cell_height * self.0.len() as f32 + padding_y * (self.0.len() as f32 - 1.0);
+        let remaining_window_width = window_rect.w() - field_width;
+        let remaining_window_height = window_rect.h() - field_height;
+
+        for (y, row) in self.0.iter().enumerate() {
+            for (x, cell) in row.iter().enumerate() {
+                let cell_x_pos = remaining_window_width / 2.0 + cell_width * x as f32 + padding_x * x as f32;
+                let cell_y_pos = remaining_window_height / 2.0 + cell_height * y as f32 + padding_y * y as f32;
+
+                let (mut r, g, b) = (0.0, 1.0, 0.0);
+                if cell.is_bomb {
+                    r = 1.0;
+                }
+
+                draw.rect()
+                    .x_y(cell_x_pos, cell_y_pos)
+                    .w_h(cell_width, cell_height)
+                    .rgb(r, g, b);
             }
         }
     }
 }
 
-fn main() {
-    let mut field = Field::empty(MAX_ROWS, MAX_COLS);
-    field.place_bombs(BOMB_COUNT);
-    dbg!(field);
-    nannou::sketch(view).run()
+struct Model {
+    field: Field,
 }
 
-fn view(app: &App, frame: Frame) {
-    let draw = app.draw();
+fn main() {
+    nannou::app(model).update(update).run();
+}
 
+/// Creates the window and sets up the [`Model`].
+fn model(app: &App) -> Model {
+    let _window_id = app
+        .new_window()
+        .title("minesweeper_rs")
+        .size(800, 800)
+        .view(view)
+        .build()
+        .unwrap();
+
+    let mut field = Field::empty(MAX_ROWS, MAX_COLS);
+    field.place_bombs(BOMB_COUNT);
+
+    Model {
+        field,
+    }
+}
+
+fn update(_app: &App, model: &mut Model, _update: Update) {}
+
+/// Draws once a frame to the window.
+fn view(app: &App, model: &Model, frame: Frame) {
+    let mut draw = app.draw();
+    // Change Origin Point to bottom left
+    draw = draw.x_y(-app.window_rect().w() * 0.5, -app.window_rect().h() * 0.5);
     draw.background().color(CORNFLOWERBLUE);
 
-    draw.rect()
-        .x_y(app.mouse.y, app.mouse.x)
-        .w(app.mouse.x * 0.25)
-        .hsv(1.0, 1.0, 1.0);
+    model.field.draw(&app.window_rect(), &draw);
 
     draw.to_frame(app, &frame).unwrap();
 }
