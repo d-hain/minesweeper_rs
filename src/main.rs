@@ -32,7 +32,11 @@ impl Field {
         Self(field)
     }
 
-    fn place_bombs(&mut self, bomb_count: u8) {
+    fn get(&self, pos: Point2) -> Cell{
+        self.0[pos.y as usize][pos.x as usize]
+    }
+
+    pub fn place_bombs(&mut self, bomb_count: u8) {
         let mut rand_y;
         let mut rand_x;
         let mut cell;
@@ -50,18 +54,20 @@ impl Field {
     /// Reveals the given points Field
     /// @return If cells is a bomb
     pub fn reveal(&mut self, pos: Point2) -> bool{
-        let mut cell = self.0[pos.y as usize][pos.x as usize];
+        let mut cell = self.get(pos);
         cell.is_revealed = true;
 
         cell.is_bomb
     }
 
-
-
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
         let mut bombs = 0;
-        if pos.x as u32 > 0 {
-            bombs += self.0[pos.y as usize][pos.x as usize-1].is_bomb as usize;
+        if pos.x as u8 > 0 {
+            bombs += self.get(pos).is_bomb as usize;
+
+            if pos.y as u8 > 0 {
+                bombs += 1;
+            }
         }
 
         bombs as u8
