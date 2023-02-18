@@ -1,6 +1,10 @@
 use nannou::prelude::*;
 use rand::Rng;
 
+const MAX_ROWS: u8 = 10;
+const MAX_COLS: u8 = 10;
+const BOMB_COUNT: u8 = 10;
+
 #[derive(Default, Clone, Copy, Debug)]
 struct Cell {
     has_flag: bool,
@@ -44,11 +48,9 @@ impl Field {
     }
 }
 
-
-
 fn main() {
-    let mut field = Field::empty(10, 10);
-    field.place_bombs(10);
+    let mut field = Field::empty(MAX_ROWS, MAX_COLS);
+    field.place_bombs(BOMB_COUNT);
     dbg!(field);
     nannou::sketch(view).run()
 }
