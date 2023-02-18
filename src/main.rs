@@ -80,10 +80,10 @@ impl Field {
     }
 
     fn in_field(&self, pos: Point2) -> bool {
-        if x < 0 || y < 0 {
-            false
+        if pos.x < 0.0 || pos.y < 0.0 {
+            return false;
         }
-        (pos.x as u8) < MAX_COLS && (y as u8) < MAX_ROWS
+        (pos.x as u8) < MAX_COLS && (pos.y as u8) < MAX_ROWS
     }
 
     fn get_neighbor_positions(&self, pos: &Point2) -> Vec<Point2> {
