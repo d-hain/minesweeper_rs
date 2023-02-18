@@ -1,10 +1,11 @@
-use nannou::image::Rgb;
 use nannou::prelude::*;
 use rand::Rng;
 
 const MAX_ROWS: u8 = 10;
 const MAX_COLS: u8 = 10;
 const BOMB_COUNT: u8 = 10;
+const CELL_COLOR: CellColor = CellColor::new(0.0, 1.0, 0.0);
+const BOMB_COLOR: CellColor = CellColor::new(1.0, 0.0, 0.0);
 
 #[derive(Default, Clone, Copy, Debug)]
 struct Cell {
@@ -20,6 +21,28 @@ impl Cell {
             is_bomb,
             ..Default::default()
         }
+    }
+}
+
+struct CellColor {
+    r: f32,
+    g: f32,
+    b: f32,
+}
+
+impl CellColor {
+    const fn new(r: f32, g: f32, b: f32) -> Self {
+        Self {
+            r,
+            g,
+            b,
+        }
+    }
+}
+
+impl From<CellColor> for (f32, f32, f32) {
+    fn from(value: CellColor) -> Self {
+        (value.r, value.g, value.g)
     }
 }
 
@@ -68,20 +91,20 @@ impl Field {
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
         let mut bombs = 0;
         if pos.x as u8 > 0 {
-            let top = Point2::new(pos.x-1.0, pos.y);
+            let top = Point2::new(pos.x - 1.0, pos.y);
             bombs += self.get(top).is_bomb as usize;
 
             if pos.y as u8 > 0 {
-                let top_left = Point2::new(pos.x-1.0, pos.y-1.0);
-                let left  = Point2::new(pos.x, pos.y-1.0);
+                let top_left = Point2::new(pos.x - 1.0, pos.y - 1.0);
+                let left = Point2::new(pos.x, pos.y - 1.0);
 
                 bombs += self.get(top_left).is_bomb as usize;
                 bombs += self.get(left).is_bomb as usize;
             }
 
             if (pos.y as u8) < MAX_ROWS - 1 {
-                let top_right = Point2::new(pos.x-1.0, pos.y+1.0);
-                let right = Point2::new(pos.x, pos.y+1.0);
+                let top_right = Point2::new(pos.x - 1.0, pos.y + 1.0);
+                let right = Point2::new(pos.x, pos.y + 1.0);
 
                 bombs += self.get(top_right).is_bomb as usize;
                 bombs += self.get(right).is_bomb as usize;
@@ -89,16 +112,16 @@ impl Field {
         }
 
         if (pos.x as u8) < MAX_COLS {
-            let bottom = Point2::new(pos.x+1.0, pos.y);
+            let bottom = Point2::new(pos.x + 1.0, pos.y);
             bombs += self.get(bottom).is_bomb as usize;
             if pos.y as u8 > 0 {
-                let bottom_left = Point2::new(pos.x+1.0, pos.y-1.0);
+                let bottom_left = Point2::new(pos.x + 1.0, pos.y - 1.0);
 
                 bombs += self.get(bottom_left).is_bomb as usize;
             }
 
             if (pos.y as u8) < MAX_ROWS - 1 {
-                let bottom_right = Point2::new(pos.x+1.0, pos.y+1.0);
+                let bottom_right = Point2::new(pos.x + 1.0, pos.y + 1.0);
 
                 bombs += self.get(bottom_right).is_bomb as usize;
             }
@@ -132,9 +155,9 @@ impl Field {
                 let cell_x_pos = remaining_window_width / 2.0 + cell_width * x as f32 + padding_x * x as f32;
                 let cell_y_pos = remaining_window_height / 2.0 + cell_height * y as f32 + padding_y * y as f32;
 
-                let (mut r, g, b) = (0.0, 1.0, 0.0);
+                let (mut r, mut g, mut b) = CELL_COLOR.into();
                 if cell.is_bomb {
-                    r = 1.0;
+                    (r, g, b) = BOMB_COLOR.into();
                 }
 
                 draw.rect()
