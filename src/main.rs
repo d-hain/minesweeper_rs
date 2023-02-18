@@ -74,6 +74,8 @@ impl Field {
             }
             cell.is_bomb = true;
         }
+
+        self.set_bomb_counts();
     }
 
     /// Reveals the given [`Point2`] in the [`Field`].
@@ -84,7 +86,6 @@ impl Field {
     pub fn reveal(&mut self, pos: Point2) -> bool {
         let mut cell = self.get(pos);
         cell.is_revealed = true;
-
         cell.is_bomb
     }
 
@@ -102,7 +103,7 @@ impl Field {
                 bombs += self.get(left).is_bomb as usize;
             }
 
-            if (pos.y as u8) < MAX_ROWS - 1 {
+            if (pos.y as usize) < self.0.len() - 1 {
                 let top_right = Point2::new(pos.x - 1.0, pos.y + 1.0);
                 let right = Point2::new(pos.x, pos.y + 1.0);
 
@@ -111,7 +112,7 @@ impl Field {
             }
         }
 
-        if (pos.x as u8) < MAX_COLS {
+        if (pos.x as usize) < self.0[pos.y as usize].len() - 1 {
             let bottom = Point2::new(pos.x + 1.0, pos.y);
             bombs += self.get(bottom).is_bomb as usize;
             if pos.y as u8 > 0 {
@@ -120,7 +121,7 @@ impl Field {
                 bombs += self.get(bottom_left).is_bomb as usize;
             }
 
-            if (pos.y as u8) < MAX_ROWS - 1 {
+            if (pos.y as usize) < self.0.len() - 1 {
                 let bottom_right = Point2::new(pos.x + 1.0, pos.y + 1.0);
 
                 bombs += self.get(bottom_right).is_bomb as usize;
