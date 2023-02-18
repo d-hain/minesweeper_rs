@@ -1,3 +1,4 @@
+use nannou::image::Rgb;
 use nannou::prelude::*;
 use rand::Rng;
 
@@ -26,7 +27,7 @@ impl Cell {
 struct Field(Vec<Vec<Cell>>);
 
 impl Field {
-    /// Create an empty [`Field`] without any bombs
+    /// Create an empty [`Field`] without any bombs.
     pub fn empty(rows: u8, cols: u8) -> Self {
         let field = vec![vec![Cell::new(false); cols as usize]; rows as usize];
 
@@ -52,7 +53,7 @@ impl Field {
         }
     }
 
-    /// Reveals the given [`Point2`] in the [`Field`]
+    /// Reveals the given [`Point2`] in the [`Field`].
     ///
     /// # Returns
     ///
@@ -115,7 +116,7 @@ impl Field {
         }
     }
 
-    /// Draw the [`Field`] in the middle of the `draw`
+    /// Draw the [`Field`] in the middle of the `draw`.
     pub fn draw(&self, window_rect: &Rect, draw: &Draw) {
         let cell_width = window_rect.w() / (self.0.len() as f32 * 2.0);
         let cell_height = window_rect.h() / (self.0.len() as f32 * 2.0);
@@ -131,17 +132,15 @@ impl Field {
                 let cell_x_pos = remaining_window_width / 2.0 + cell_width * x as f32 + padding_x * x as f32;
                 let cell_y_pos = remaining_window_height / 2.0 + cell_height * y as f32 + padding_y * y as f32;
 
+                let (mut r, g, b) = (0.0, 1.0, 0.0);
+                if cell.is_bomb {
+                    r = 1.0;
+                }
+
                 draw.rect()
                     .x_y(cell_x_pos, cell_y_pos)
                     .w_h(cell_width, cell_height)
-                    .rgb(0.0, 1.0, 0.0);
-
-                if cell.is_bomb {
-                    draw.rect()
-                        .x_y(cell_x_pos, cell_y_pos)
-                        .w_h(cell_width, cell_height)
-                        .rgb(1.0, 1.0, 0.0);
-                }
+                    .rgb(r, g, b);
             }
         }
     }
@@ -155,7 +154,7 @@ fn main() {
     nannou::app(model).update(update).run();
 }
 
-/// Creates the window and sets up the [`Model`]
+/// Creates the window and sets up the [`Model`].
 fn model(app: &App) -> Model {
     let _window_id = app
         .new_window()
@@ -175,7 +174,7 @@ fn model(app: &App) -> Model {
 
 fn update(_app: &App, model: &mut Model, _update: Update) {}
 
-/// Draws once a frame to the window
+/// Draws once a frame to the window.
 fn view(app: &App, model: &Model, frame: Frame) {
     let mut draw = app.draw();
     // Change Origin Point to bottom left
