@@ -114,45 +114,7 @@ impl Field {
 
 
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
-        let mut bombs = 0;
-        if pos.x as u8 > 0 {
-            let top = Point2::new(pos.x - 1.0, pos.y);
-            bombs += self.get(top).is_bomb as usize;
-
-            if pos.y as u8 > 0 {
-                let top_left = Point2::new(pos.x - 1.0, pos.y - 1.0);
-                let left = Point2::new(pos.x, pos.y - 1.0);
-
-                bombs += self.get(top_left).is_bomb as usize;
-                bombs += self.get(left).is_bomb as usize;
-            }
-
-            if (pos.y as usize) < self.0.len() - 1 {
-                let top_right = Point2::new(pos.x - 1.0, pos.y + 1.0);
-                let right = Point2::new(pos.x, pos.y + 1.0);
-
-                bombs += self.get(top_right).is_bomb as usize;
-                bombs += self.get(right).is_bomb as usize;
-            }
-        }
-
-        if (pos.x as usize) < self.0[pos.y as usize].len() - 1 {
-            let bottom = Point2::new(pos.x + 1.0, pos.y);
-            bombs += self.get(bottom).is_bomb as usize;
-            if pos.y as u8 > 0 {
-                let bottom_left = Point2::new(pos.x + 1.0, pos.y - 1.0);
-
-                bombs += self.get(bottom_left).is_bomb as usize;
-            }
-
-            if (pos.y as usize) < self.0.len() - 1 {
-                let bottom_right = Point2::new(pos.x + 1.0, pos.y + 1.0);
-
-                bombs += self.get(bottom_right).is_bomb as usize;
-            }
-        }
-
-        bombs as u8
+        self.get_neighbor_positions(&pos).iter().map(|pos| self.get(*pos).is_bomb as u8).sum()
     }
 
     fn set_bomb_counts(&mut self) {
@@ -214,7 +176,7 @@ fn model(app: &App) -> Model {
 
     let mut field = Field::empty(MAX_ROWS, MAX_COLS);
     field.place_bombs(BOMB_COUNT);
-
+    dbg!(&field);
     Model {
         field,
     }
