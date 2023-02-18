@@ -1,4 +1,5 @@
 use nannou::prelude::*;
+use rand::Rng;
 
 #[derive(Default, Clone, Copy, Debug)]
 struct Cell {
@@ -26,10 +27,29 @@ impl Field {
 
         Self(field)
     }
+
+    fn place_bombs(&mut self, bomb_count: u8) {
+        let mut rand_y;
+        let mut rand_x;
+        let mut cell;
+        for _ in 0..bomb_count {
+            loop {
+                rand_y = rand::thread_rng().gen_range(0..self.0.len());
+                rand_x = rand::thread_rng().gen_range(0..self.0[0].len());
+                cell = &mut self.0[rand_y][rand_x];
+                if !cell.is_bomb {break}
+            }
+            cell.is_bomb = true;
+        }
+    }
 }
 
+
+
 fn main() {
-    dbg!(Field::empty(10, 10));
+    let mut field = Field::empty(10, 10);
+    field.place_bombs(10);
+    dbg!(field);
     nannou::sketch(view).run()
 }
 
