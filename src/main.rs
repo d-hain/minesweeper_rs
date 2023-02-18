@@ -63,10 +63,39 @@ impl Field {
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
         let mut bombs = 0;
         if pos.x as u8 > 0 {
-            bombs += self.get(pos).is_bomb as usize;
+            let top = Point2::new(pos.x-1.0, pos.y);
+            bombs += self.get(top).is_bomb as usize;
 
             if pos.y as u8 > 0 {
-                bombs += 1;
+                let top_left = Point2::new(pos.x-1.0, pos.y-1.0);
+                let left  = Point2::new(pos.x, pos.y-1.0);
+
+                bombs += self.get(top_left).is_bomb as usize;
+                bombs += self.get(left).is_bomb as usize;
+            }
+
+            if (pos.y as u8) < MAX_ROWS - 1 {
+                let top_right = Point2::new(pos.x-1.0, pos.y+1.0);
+                let right = Point2::new(pos.x, pos.y+1.0);
+
+                bombs += self.get(top_right).is_bomb as usize;
+                bombs += self.get(right).is_bomb as usize;
+            }
+        }
+
+        if (pos.x as u8) < MAX_COLS {
+            let bottom = Point2::new(pos.x+1.0, pos.y);
+            bombs += self.get(bottom).is_bomb as usize;
+            if pos.y as u8 > 0 {
+                let bottom_left = Point2::new(pos.x+1.0, pos.y-1.0);
+
+                bombs += self.get(bottom_left).is_bomb as usize;
+            }
+
+            if (pos.y as u8) < MAX_ROWS - 1 {
+                let bottom_right = Point2::new(pos.x+1.0, pos.y+1.0);
+
+                bombs += self.get(bottom_right).is_bomb as usize;
             }
         }
 
