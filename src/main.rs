@@ -80,6 +80,9 @@ impl Field {
     }
 
     fn in_field(&self, pos: Point2) -> bool {
+        if pos.x < 0.0 || pos.y < 0.0 {
+            return false;
+        }
         (pos.x as u8) < MAX_COLS && (pos.y as u8) < MAX_ROWS
     }
 
