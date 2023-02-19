@@ -257,15 +257,17 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for button in app.mouse.buttons.pressed() {
         match button {
             (MouseButton::Left, position) => {
-                let clicked_cell_pos = mouse_pos_to_field_pos(&position, model);
-                if model.field.get(clicked_cell_pos).is_revealed {
-                    model.field.reveal_neighbors(clicked_cell_pos);
-                } 
-                model.field.reveal(&clicked_cell_pos);
+                if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                    if model.field.get(position).is_revealed {
+                        model.field.reveal_neighbors(position);
+                    } 
+                    model.field.reveal(&position);
+                }
             }
             (MouseButton::Right, position) => {
-                let clicked_cell_pos = mouse_pos_to_field_pos(&position, model);
-                model.field.toggle_flag(&clicked_cell_pos);
+                if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                    model.field.toggle_flag(&position);
+                }
             }
             (_, _) => {}
         }
