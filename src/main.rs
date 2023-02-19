@@ -314,13 +314,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
 /// None if the position is outside of the [`Field`]
 fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
     let field_x = mouse_pos.x + model.field_margin_x;
-    let cell_x = (field_x / model.cell_width) as u8;
+    let cell_x = (field_x / model.cell_width - 0.5) as u8;
     let field_y = mouse_pos.y + model.field_margin_y;
-    let cell_y = (field_y / model.cell_height) as u8;
+    let cell_y = (field_y / model.cell_height - 0.5) as u8;
 
     if cell_x >= MAX_COLS || cell_y >= MAX_ROWS {
         None
     } else {
+        dbg!(Some(Point2::new(cell_x as f32, cell_y as f32)));
         Some(Point2::new(cell_x as f32, cell_y as f32))
     }
 }
