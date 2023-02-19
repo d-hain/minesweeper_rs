@@ -1,9 +1,10 @@
+use std::time::SystemTime;
 use nannou::prelude::*;
 use rand::Rng;
 
-const MAX_ROWS: u8 = 10;
-const MAX_COLS: u8 = 10;
-const BOMB_COUNT: u8 = 10;
+const MAX_ROWS: u32 = 25;
+const MAX_COLS: u32 = 25;
+const BOMB_COUNT: u32 = 150;
 const CELL_COLOR: CellColor = CellColor::new(0.0, 1.0, 0.0);
 const BOMB_COLOR: CellColor = CellColor::new(1.0, 0.0, 0.0);
 const REVEALED_COLOR: CellColor = CellColor::new(0.69, 0.69, 0.69);
@@ -12,7 +13,7 @@ const REVEALED_COLOR: CellColor = CellColor::new(0.69, 0.69, 0.69);
 struct Cell {
     has_flag: bool,
     is_bomb: bool,
-    bomb_count: u8,
+    bomb_count: u32,
     is_revealed: bool,
 }
 
@@ -52,7 +53,7 @@ struct Field(Vec<Vec<Cell>>);
 
 impl Field {
     /// Create an empty [`Field`] without any bombs.
-    pub fn empty(rows: u8, cols: u8) -> Self {
+    pub fn empty(rows: u32, cols: u32) -> Self {
         let field = vec![vec![Cell::new(false); cols as usize]; rows as usize];
 
         Self(field)
@@ -69,7 +70,7 @@ impl Field {
     }
 
     /// Place the given `bomb_amount` at random points in the [`Field`].
-    pub fn place_bombs(&mut self, bomb_count: u8) {
+    pub fn place_bombs(&mut self, bomb_count: u32) {
         let mut rand_y;
         let mut rand_x;
         let mut cell;
@@ -95,7 +96,7 @@ impl Field {
         if position.x < 0.0 || position.y < 0.0 {
             return false;
         }
-        (position.x as u8) < MAX_COLS && (position.y as u8) < MAX_ROWS
+        (position.x as u32) < MAX_COLS && (position.y as u32) < MAX_ROWS
     }
 
     /// Get the positions of the neighbors of the [`Cell`] at the given `position`.
@@ -152,24 +153,31 @@ impl Field {
         }
     }
 
+    /// Reveals all [`Cell`]s in the [`Field`].
+    fn reveal_all(&mut self) {
+        for mut cell in self.0.iter_mut().flatten().collect::<Vec<&mut Cell>>() {
+            cell.is_revealed = true;
+        }
+    }
+
     /// # Returns
     ///
     /// the count of the surrounding flags of the [`Cell`] at the given `position`.
-    fn count_surrounding_flags(&self, position: &Point2) -> u8 {
+    fn count_surrounding_flags(&self, position: &Point2) -> u32 {
         self.get_neighbor_positions(position)
             .iter()
-            .map(|e| self.get(*e).has_flag as u8)
-            .sum::<u8>()
+            .map(|e| self.get(*e).has_flag as u32)
+            .sum::<u32>()
     }
 
     /// # Returns
     ///
     /// the count of the surrounding bombs of the [`Cell`] at the given `position`.
-    fn count_surrounding_bombs(&self, position: Point2) -> u8 {
+    fn count_surrounding_bombs(&self, position: Point2) -> u32 {
         self.get_neighbor_positions(&position)
             .iter()
-            .map(|pos| self.get(*pos).is_bomb as u8)
-            .sum::<u8>()
+            .map(|pos| self.get(*pos).is_bomb as u32)
+            .sum::<u32>()
     }
 
     /// # Returns
@@ -177,7 +185,7 @@ impl Field {
     /// if the game has been won.
     fn check_win(&self) -> bool {
         let flattened = self.0.iter().flatten().collect::<Vec<&Cell>>();
-        flattened.iter().map(|e| !e.is_revealed as u8).sum::<u8>() == BOMB_COUNT
+        flattened.iter().map(|e| !e.is_revealed as u32).sum::<u32>() == BOMB_COUNT
     }
 
     /// Sets the bomb_count property of all [`Cell`]s that are no bombs.
@@ -208,8 +216,7 @@ impl Field {
 
                 // Determine Cell color
                 let (mut r, mut g, mut b) = CELL_COLOR.into();
-                if cell.is_bomb {
-                    // && cell.is_revealed { // TODO: change to only visible when cell visible
+                if cell.is_bomb && cell.is_revealed {
                     (r, g, b) = BOMB_COLOR.into();
                 } else if cell.is_revealed {
                     (r, g, b) = REVEALED_COLOR.into();
@@ -254,7 +261,7 @@ impl Field {
                 "looser"
             };
             draw.text(message)
-                .x_y(model.field_margin_x+model.field_width/2.0, model.field_height + model.field_margin_y*1.5)
+                .x_y(model.field_margin_x + model.field_width / 2.0, model.field_height + model.field_margin_y * 1.5)
                 .w_h(model.field_width, model.field_margin_y)
                 .font_size(model.cell_width as u32)
                 .align_text_middle_y()
@@ -273,6 +280,8 @@ struct Model {
     field_height: f32,
     field_margin_x: f32,
     field_margin_y: f32,
+    last_left_click: u128,
+    last_right_click: u128,
 }
 
 fn main() {
@@ -302,25 +311,44 @@ fn model(app: &App) -> Model {
         field_height: 0.0,
         field_margin_x: 0.0,
         field_margin_y: 0.0,
+        last_left_click: 0,
+        last_right_click: 0,
     }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
+    if model.lost || model.won { return; }
+    
     let window_rect = app.window_rect();
 
     for button in app.mouse.buttons.pressed() {
         match button {
             (MouseButton::Left, position) => {
+                let time_now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("WHAT THE FUCK?").as_millis();
+                if time_now - model.last_left_click < 150 { break; }
+
+                model.last_left_click = time_now;
                 if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                    if model.field.get(position).has_flag { break; }
+                    
                     if model.field.get(position).is_revealed {
                         model.field.reveal_neighbors(position);
                     }
                     model.lost = model.field.reveal(&position);
                 }
                 model.won = model.field.check_win();
+                
+                if model.won || model.lost {
+                    model.field.reveal_all();
+                }
             }
             (MouseButton::Right, position) => {
+                let time_now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("WHAT THE FUCK?").as_millis();
+                if time_now - model.last_right_click < 150 { break; }
+
+                model.last_right_click = time_now;
                 if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                    if model.field.get(position).is_revealed { break; }
                     model.field.toggle_flag(&position);
                 }
             }
@@ -329,8 +357,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     // Calculate Cell and Field sizes and save them
-    let cell_width = window_rect.w() / (model.field.0.len() as f32 * 2.0);
-    let cell_height = window_rect.h() / (model.field.0.len() as f32 * 2.0);
+    let cell_width = (window_rect.w() * 0.5) / model.field.0.len() as f32;
+    let cell_height = (window_rect.h() *  0.5) / model.field.0.len() as f32;
     let field_width = cell_width * (model.field.0.len() as f32 - 1.0);
     let field_height = cell_height * (model.field.0.len() as f32 - 1.0);
     let remaining_window_width = window_rect.w() - field_width;
@@ -363,14 +391,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
 /// [`None`] if the `mouse_pos` is outside of the [`Field`].
 fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
     let field_x = mouse_pos.x + model.field_margin_x;
-    let cell_x = (field_x / model.cell_width - 0.5) as u8;
+    let cell_x = (field_x / model.cell_width - 0.5) as u32;
     let field_y = mouse_pos.y + model.field_margin_y;
-    let cell_y = (field_y / model.cell_height - 0.5) as u8;
+    let cell_y = (field_y / model.cell_height - 0.5) as u32;
 
     if cell_x >= MAX_COLS || cell_y >= MAX_ROWS {
         None
     } else {
-        dbg!(Some(Point2::new(cell_x as f32, cell_y as f32)));
         Some(Point2::new(cell_x as f32, cell_y as f32))
     }
 }
