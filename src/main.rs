@@ -208,6 +208,12 @@ impl Field {
                         .align_text_middle_y()
                         .color(BLACK);
                 }
+
+                if cell.has_flag {
+                    draw.tri()
+                        .color(STEELBLUE)
+                        .points(Point2::new(cell_x_pos, cell_y_pos), Point2::new(cell_x_pos, cell_y_pos+model.cell_height), Point2::new(cell_x_pos+model.cell_width, cell_y_pos+model.cell_height/2.0));
+                }
             }
         }
     }
@@ -260,7 +266,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 if let Some(position) = mouse_pos_to_field_pos(&position, model) {
                     if model.field.get(position).is_revealed {
                         model.field.reveal_neighbors(position);
-                    } 
+                    }
                     model.field.reveal(&position);
                 }
             }
