@@ -62,6 +62,10 @@ impl Field {
         self.0[pos.y as usize][pos.x as usize]
     }
 
+    fn get_mut(&mut self, pos: Point2) -> &mut Cell {
+        &mut self.0[pos.y as usize][pos.x as usize]
+    }
+
     pub fn place_bombs(&mut self, bomb_count: u8) {
         let mut rand_y;
         let mut rand_x;
@@ -105,7 +109,7 @@ impl Field {
     ///
     /// if the [`Cell`] is a bomb
     pub fn reveal(&mut self, pos: &Point2) -> bool {
-        let mut cell = self.get(*pos);
+        let mut cell = self.get_mut(*pos);
         cell.is_revealed = true;
         if cell.is_bomb {
             return true;
@@ -114,7 +118,7 @@ impl Field {
             return false;
         } else {
             for neighbor_pos in self.get_neighbor_positions(&pos).iter().filter(|e| !self.get(**e).is_revealed).collect::<Vec<&Point2>>() {
-                self.reveal(neighbor_pos);
+                self.reveal(&neighbor_pos);
             }
         }
         false
