@@ -248,13 +248,17 @@ impl Field {
             }
         }
         if model.won || model.lost {
-            let message = if model.won {"Wow! You won OMG MLG"} else {"looser"};
+            let message = if model.won {
+                "Wow! You won OMG MLG"
+            } else {
+                "looser"
+            };
             draw.text(message)
-            .x_y(0.0, model.field_height + model.field_margin_y)
-            .w_h(model.field_width, model.field_margin_y)
-            .font_size(model.cell_width as u32)
-            .align_text_middle_y()
-            .color(BLACK);
+                .x_y(model.field_margin_x+model.field_width/2.0, model.field_height + model.field_margin_y*1.5)
+                .w_h(model.field_width, model.field_margin_y)
+                .font_size(model.cell_width as u32)
+                .align_text_middle_y()
+                .color(BLACK);
         }
     }
 }
@@ -310,7 +314,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 if let Some(position) = mouse_pos_to_field_pos(&position, model) {
                     if model.field.get(position).is_revealed {
                         model.field.reveal_neighbors(position);
-                    } 
+                    }
                     model.lost = model.field.reveal(&position);
                 }
                 model.won = model.field.check_win();
