@@ -1,4 +1,3 @@
-use nannou::image::Rgb;
 use nannou::prelude::*;
 use rand::Rng;
 
@@ -7,6 +6,7 @@ const MAX_COLS: u8 = 10;
 const BOMB_COUNT: u8 = 10;
 const CELL_COLOR: CellColor = CellColor::new(0.0, 1.0, 0.0);
 const BOMB_COLOR: CellColor = CellColor::new(1.0, 0.0, 0.0);
+const REVEALED_COLOR: CellColor = CellColor::new(0.69, 0.69, 0.69);
 
 #[derive(Default, Clone, Copy, Debug)]
 struct Cell {
@@ -153,6 +153,16 @@ impl Field {
                 let (mut r, mut g, mut b) = CELL_COLOR.into();
                 if cell.is_bomb {
                     (r, g, b) = BOMB_COLOR.into();
+                } else if cell.is_revealed {
+                    (r, g, b) = REVEALED_COLOR.into();
+                    if cell.bomb_count > 0 {
+                        draw.text(&cell.bomb_count.to_string())
+                            .x_y(cell_x_pos, cell_y_pos)
+                            .w_h(cell_width, cell_height)
+                            .font_size((cell_width/2.0) as u32 )
+                            .align_text_middle_y()
+                            .color(BLACK);
+                    }
                 }
 
                 draw.rect()
@@ -161,14 +171,6 @@ impl Field {
                     .stroke(BLACK)
                     .stroke_weight(1.0)
                     .rgb(r, g, b);
-                if cell.bomb_count > 0 {
-                    draw.text(&cell.bomb_count.to_string())
-                        .x_y(cell_x_pos, cell_y_pos)
-                        .w_h(cell_width, cell_height)
-                        .font_size((cell_width/2.0) as u32 )
-                        .align_text_middle_y()
-                        .color(BLACK);
-                }
             }
         }
     }
