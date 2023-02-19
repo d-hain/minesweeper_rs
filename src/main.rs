@@ -114,7 +114,10 @@ impl Field {
         false
     }
 
-
+    fn check_win(self) -> bool {
+        let flattened = self.0.into_iter().flatten().collect::<Vec<Cell>>();
+        flattened.iter().map(|e| e.is_bomb as u8).sum::<u8>() == BOMB_COUNT
+    }
 
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
         self.get_neighbor_positions(&pos).iter().map(|pos| self.get(*pos).is_bomb as u8).sum()
