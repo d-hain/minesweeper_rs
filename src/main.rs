@@ -234,7 +234,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for button in app.mouse.buttons.pressed() {
         match button {
             (MouseButton::Left, position) => {
-                model.field.reveal(&mouse_pos_to_field_pos(&position, &model.field, &app.window_rect()));
+                model.field.reveal(&mouse_pos_to_field_pos(&position, model));
             }
             (MouseButton::Right, position) => println!("Floggn at {}", position),
             (_, _) => {}
