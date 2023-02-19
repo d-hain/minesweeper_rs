@@ -303,9 +303,10 @@ fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
     let field_y = mouse_pos.y + model.field_margin_y;
     let cell_y = (field_y / model.cell_height) as u8;
 
-    if cell_x == 0 || cell_x >= MAX_COLS || cell_y == 0 || cell_y >= MAX_ROWS {
+    if cell_x >= MAX_COLS || cell_y >= MAX_ROWS {
         None
     } else {
+        dbg!(Point2::new(cell_x as f32, cell_y as f32));
         Some(Point2::new(cell_x as f32, cell_y as f32))
     }
 }
