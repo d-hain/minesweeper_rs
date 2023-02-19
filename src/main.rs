@@ -192,7 +192,6 @@ fn model(app: &App) -> Model {
 
     let mut field = Field::empty(MAX_ROWS, MAX_COLS);
     field.place_bombs(BOMB_COUNT);
-    dbg!(&field);
     Model {
         field,
     }
