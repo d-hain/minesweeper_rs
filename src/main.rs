@@ -172,7 +172,7 @@ impl Field {
     }
 
     pub fn toggle_flag(&mut self, pos: &Point2) {
-        self.get_mut(*pos).is_revealed = ! self.get_mut(*pos).is_revealed;
+        self.get_mut(*pos).has_flag = ! self.get_mut(*pos).has_flag;
     }
 
     /// Draw the [`Field`] in the middle of the `draw`.
