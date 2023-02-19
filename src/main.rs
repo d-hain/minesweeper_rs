@@ -4,7 +4,7 @@ use rand::Rng;
 
 const MAX_ROWS: u32 = 25;
 const MAX_COLS: u32 = 25;
-const BOMB_COUNT: u32 = 150;
+const BOMB_COUNT: u32 = (MAX_ROWS * MAX_COLS) / 10;
 const CELL_COLOR: CellColor = CellColor::new(0.0, 1.0, 0.0);
 const BOMB_COLOR: CellColor = CellColor::new(1.0, 0.0, 0.0);
 const REVEALED_COLOR: CellColor = CellColor::new(0.69, 0.69, 0.69);
@@ -70,7 +70,11 @@ impl Field {
     }
 
     /// Place the given `bomb_amount` at random points in the [`Field`].
-    pub fn place_bombs(&mut self, bomb_count: u32) {
+    pub fn place_bombs(&mut self, mut bomb_count: u32) {
+        if MAX_ROWS * MAX_COLS <= bomb_count {
+            bomb_count = (MAX_ROWS * MAX_COLS) / 15;
+        }
+
         let mut rand_y;
         let mut rand_x;
         let mut cell;
@@ -140,17 +144,30 @@ impl Field {
     }
 
     /// Reveals all neighbors of the [`Cell`] at the given `position`
-    fn reveal_neighbors(&mut self, position: Point2) {
-        let neighbors = self.get_neighbor_positions(&position);
-        if self.get(position).bomb_count != self.count_surrounding_flags(&position) {
-            return;
+    /// 
+    /// # Returns
+    /// 
+    /// true if the player checked with incorrect flags.
+    fn reveal_neighbors(&mut self, position: Point2) -> bool {
+        let surrounding_flags = self.count_surrounding_flags(&position);
+        if surrounding_flags == 0 {
+            return false;
         }
+        
+        let neighbors = self.get_neighbor_positions(&position);
+        if self.get(position).bomb_count == self.count_surrounding_flags(&position)
+            && !neighbors.iter().filter(|point| self.get(**point).is_bomb && !self.get(**point).has_flag).collect::<Vec<&Point2>>().is_empty() {
+            return true;
+        }
+
         for neighbor_pos in neighbors {
             let neighbor = self.get(neighbor_pos);
             if !neighbor.is_revealed && !neighbor.has_flag {
                 self.reveal(&neighbor_pos);
             }
         }
+        
+        false
     }
 
     /// Reveals all [`Cell`]s in the [`Field`].
@@ -166,7 +183,7 @@ impl Field {
     fn count_surrounding_flags(&self, position: &Point2) -> u32 {
         self.get_neighbor_positions(position)
             .iter()
-            .map(|e| self.get(*e).has_flag as u32)
+            .map(|point| self.get(*point).has_flag as u32)
             .sum::<u32>()
     }
 
@@ -335,9 +352,10 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     if model.field.get(position).has_flag { break; }
 
                     if model.field.get(position).is_revealed {
-                        model.field.reveal_neighbors(position);
+                        model.lost = model.field.reveal_neighbors(position);
+                    } else {
+                        model.lost = model.field.reveal(&position);
                     }
-                    model.lost = model.field.reveal(&position);
                 }
                 model.won = model.field.check_win();
 
@@ -383,7 +401,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // Change Origin Point to bottom left
     draw = draw.x_y(-app.window_rect().w() * 0.5, -app.window_rect().h() * 0.5);
     draw.background().color(CORNFLOWERBLUE);
-    
+
     model.field.draw(model, &draw);
 
     draw.to_frame(app, &frame).unwrap();
