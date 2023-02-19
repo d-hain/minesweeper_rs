@@ -17,6 +17,7 @@ struct Cell {
 }
 
 impl Cell {
+    /// Constructs a new [`Cell`].
     pub fn new(is_bomb: bool) -> Self {
         Self {
             is_bomb,
@@ -25,6 +26,7 @@ impl Cell {
     }
 }
 
+/// The color of a [`Cell`].
 struct CellColor {
     r: f32,
     g: f32,
@@ -32,6 +34,7 @@ struct CellColor {
 }
 
 impl CellColor {
+    /// Constructs a new [`CellColor`] using the given RGB values.
     const fn new(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b }
     }
@@ -43,6 +46,7 @@ impl From<CellColor> for (f32, f32, f32) {
     }
 }
 
+/// The [`Field`] of the game containing all [`Cell`]s.
 #[derive(Debug, Clone)]
 struct Field(Vec<Vec<Cell>>);
 
@@ -54,14 +58,17 @@ impl Field {
         Self(field)
     }
 
-    fn get(&self, pos: Point2) -> Cell {
-        self.0[pos.y as usize][pos.x as usize]
+    /// Get the [`Cell`] at the given `position`.
+    fn get(&self, position: Point2) -> Cell {
+        self.0[position.y as usize][position.x as usize]
     }
 
-    fn get_mut(&mut self, pos: Point2) -> &mut Cell {
-        &mut self.0[pos.y as usize][pos.x as usize]
+    /// Get a mutable reference to the [`Cell`] at the given `position`.
+    fn get_mut(&mut self, position: Point2) -> &mut Cell {
+        &mut self.0[position.y as usize][position.x as usize]
     }
 
+    /// Place the given `bomb_amount` at random points in the [`Field`].
     pub fn place_bombs(&mut self, bomb_count: u8) {
         let mut rand_y;
         let mut rand_x;
@@ -81,19 +88,23 @@ impl Field {
         self.set_bomb_counts();
     }
 
-    fn in_field(&self, pos: Point2) -> bool {
-        if pos.x < 0.0 || pos.y < 0.0 {
+    /// # Returns
+    ///
+    /// if the given `position` is in the [`Field`].
+    fn in_field(&self, position: Point2) -> bool {
+        if position.x < 0.0 || position.y < 0.0 {
             return false;
         }
-        (pos.x as u8) < MAX_COLS && (pos.y as u8) < MAX_ROWS
+        (position.x as u8) < MAX_COLS && (position.y as u8) < MAX_ROWS
     }
 
-    fn get_neighbor_positions(&self, pos: &Point2) -> Vec<Point2> {
+    /// Get the positions of the neighbors of the [`Cell`] at the given `position`.
+    fn get_neighbor_positions(&self, position: &Point2) -> Vec<Point2> {
         let mut neighbor_positions = vec![];
         for offset_y in -1..2 {
             for offset_x in -1..2 {
-                let neighbor = *pos + Point2::new(offset_x as f32, offset_y as f32);
-                if self.in_field(neighbor) && neighbor != *pos {
+                let neighbor = *position + Point2::new(offset_x as f32, offset_y as f32);
+                if self.in_field(neighbor) && neighbor != *position {
                     neighbor_positions.push(neighbor);
                 }
             }
@@ -105,7 +116,7 @@ impl Field {
     ///
     /// # Returns
     ///
-    /// if the [`Cell`] is a bomb
+    /// if the [`Cell`] is a bomb.
     pub fn reveal(&mut self, pos: &Point2) -> bool {
         let mut cell = self.get_mut(*pos);
         cell.is_revealed = true;
@@ -116,20 +127,21 @@ impl Field {
             return false;
         } else {
             for neighbor_pos in self
-                .get_neighbor_positions(&pos)
+                .get_neighbor_positions(pos)
                 .iter()
                 .filter(|e| !self.get(**e).is_revealed)
                 .collect::<Vec<&Point2>>()
             {
-                self.reveal(&neighbor_pos);
+                self.reveal(neighbor_pos);
             }
         }
         false
     }
 
-    fn reveal_neighbors(&mut self, pos: Point2) {
-        let neighbors = self.get_neighbor_positions(&pos);
-        if !(self.get(pos).bomb_count == self.count_surrounding_flags(&pos)) {
+    /// Reveals all neighbors of the [`Cell`] at the given `position`
+    fn reveal_neighbors(&mut self, position: Point2) {
+        let neighbors = self.get_neighbor_positions(&position);
+        if self.get(position).bomb_count != self.count_surrounding_flags(&position) {
             return;
         }
         for neighbor_pos in neighbors {
@@ -140,25 +152,35 @@ impl Field {
         }
     }
 
-    fn count_surrounding_flags(&self, pos: &Point2) -> u8 {
-        self.get_neighbor_positions(&pos)
+    /// # Returns
+    ///
+    /// the count of the surrounding flags of the [`Cell`] at the given `position`.
+    fn count_surrounding_flags(&self, position: &Point2) -> u8 {
+        self.get_neighbor_positions(position)
             .iter()
             .map(|e| self.get(*e).has_flag as u8)
             .sum::<u8>()
     }
 
-    fn check_win(&self) -> bool {
-        let flattened = self.0.iter().flatten().collect::<Vec<&Cell>>();
-        flattened.iter().map(|e| !e.is_revealed as u8).sum::<u8>() == BOMB_COUNT
-    }
-
-    fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
-        self.get_neighbor_positions(&pos)
+    /// # Returns
+    ///
+    /// the count of the surrounding bombs of the [`Cell`] at the given `position`.
+    fn count_surrounding_bombs(&self, position: Point2) -> u8 {
+        self.get_neighbor_positions(&position)
             .iter()
             .map(|pos| self.get(*pos).is_bomb as u8)
             .sum::<u8>()
     }
 
+    /// # Returns
+    ///
+    /// if the game has been won.
+    fn check_win(self) -> bool {
+        let flattened = self.0.into_iter().flatten().collect::<Vec<Cell>>();
+        flattened.iter().map(|e| e.is_bomb as u8).sum::<u8>() == BOMB_COUNT
+    }
+
+    /// Sets the bomb_count property of all [`Cell`]s that are no bombs.
     fn set_bomb_counts(&mut self) {
         let field = self.clone();
         for (y, row) in self.0.iter_mut().enumerate() {
@@ -171,8 +193,9 @@ impl Field {
         }
     }
 
-    pub fn toggle_flag(&mut self, pos: &Point2) {
-        self.get_mut(*pos).has_flag = ! self.get_mut(*pos).has_flag;
+    /// Sets the flag of the [`Cell`] at the given `position`.
+    pub fn toggle_flag(&mut self, position: &Point2) {
+        self.get_mut(*position).has_flag = !self.get_mut(*position).has_flag;
     }
 
     /// Draw the [`Field`] in the middle of the `draw`.
@@ -207,6 +230,12 @@ impl Field {
                         .font_size((model.cell_width / 2.0) as u32)
                         .align_text_middle_y()
                         .color(BLACK);
+                }
+
+                if cell.has_flag {
+                    draw.tri()
+                        .color(STEELBLUE)
+                        .points(Point2::new(cell_x_pos-model.cell_width/2.0, cell_y_pos-model.cell_height/2.0), Point2::new(cell_x_pos-model.cell_width/2.0, cell_y_pos+model.cell_height/2.0), Point2::new(cell_x_pos+model.cell_width/2.0, cell_y_pos));
                 }
             }
         }
@@ -315,11 +344,11 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.to_frame(app, &frame).unwrap();
 }
 
-/// Converts the position of the mouse to the corresponding field position
+/// Converts the position of the mouse to the corresponding field position.
 ///
 /// # Returns
 ///
-/// None if the position is outside of the [`Field`]
+/// [`None`] if the `mouse_pos` is outside of the [`Field`].
 fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
     let field_x = mouse_pos.x + model.field_margin_x;
     let cell_x = (field_x / model.cell_width - 0.5) as u8;
