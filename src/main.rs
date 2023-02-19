@@ -138,10 +138,10 @@ impl Field {
     pub fn draw(&self, window_rect: &Rect, draw: &Draw) {
         let cell_width = window_rect.w() / (self.0.len() as f32 * 2.0);
         let cell_height = window_rect.h() / (self.0.len() as f32 * 2.0);
-        let padding_x = cell_width / 4.0;
-        let padding_y = cell_height / 4.0;
-        let field_width = cell_width * self.0.len() as f32 + padding_x * (self.0.len() as f32 - 1.0);
-        let field_height = cell_height * self.0.len() as f32 + padding_y * (self.0.len() as f32 - 1.0);
+        let padding_x = 0.0;
+        let padding_y = 0.0;
+        let field_width = cell_width * (self.0.len() as f32-1.0) + padding_x * (self.0.len() as f32 - 1.0);
+        let field_height = cell_height * (self.0.len() as f32-1.0) + padding_y * (self.0.len() as f32 - 1.0);
         let remaining_window_width = window_rect.w() - field_width;
         let remaining_window_height = window_rect.h() - field_height;
 
