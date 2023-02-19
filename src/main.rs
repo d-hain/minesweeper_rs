@@ -124,7 +124,9 @@ impl Field {
         let field = self.clone();
         for (y, row) in self.0.iter_mut().enumerate() {
             for (x, cell) in row.iter_mut().enumerate() {
-                cell.bomb_count = field.count_surrounding_bombs(Point2::new(x as f32, y as f32));
+                if !cell.is_bomb {
+                    cell.bomb_count = field.count_surrounding_bombs(Point2::new(x as f32, y as f32));
+                }
             }
         }
     }
@@ -154,6 +156,14 @@ impl Field {
                     .x_y(cell_x_pos, cell_y_pos)
                     .w_h(cell_width, cell_height)
                     .rgb(r, g, b);
+                if cell.bomb_count > 0 {
+                    draw.text(&cell.bomb_count.to_string())
+                        .x_y(cell_x_pos, cell_y_pos)
+                        .w_h(cell_width, cell_height)
+                        .font_size((cell_width/3.0) as u32 )
+                        .align_text_middle_y()
+                        .color(BLACK);
+                }
             }
         }
     }
