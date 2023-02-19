@@ -212,7 +212,7 @@ impl Field {
                 if cell.has_flag {
                     draw.tri()
                         .color(STEELBLUE)
-                        .points(Point2::new(cell_x_pos, cell_y_pos), Point2::new(cell_x_pos, cell_y_pos+model.cell_height), Point2::new(cell_x_pos+model.cell_width, cell_y_pos+model.cell_height/2.0));
+                        .points(Point2::new(cell_x_pos-model.cell_width/2.0, cell_y_pos-model.cell_height/2.0), Point2::new(cell_x_pos-model.cell_width/2.0, cell_y_pos+model.cell_height/2.0), Point2::new(cell_x_pos+model.cell_width/2.0, cell_y_pos));
                 }
             }
         }
