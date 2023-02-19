@@ -91,7 +91,7 @@ impl Field {
         for offset_y in -1..2 {
             for offset_x in -1..2 {
                 let neighbor = *pos + Point2::new(offset_x as f32, offset_y as f32);
-                if self.in_field(neighbor) {
+                if self.in_field(neighbor) && neighbor != *pos {
                     neighbor_positions.push(neighbor);
                 }
             }
