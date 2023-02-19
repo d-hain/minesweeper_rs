@@ -196,7 +196,7 @@ impl Field {
                     .stroke_weight(1.0)
                     .rgb(r, g, b);
 
-                if cell.bomb_count > 0 && cell.is_revealed{
+                if cell.bomb_count > 0 && cell.is_revealed {
                     draw.text(&cell.bomb_count.to_string())
                         .x_y(cell_x_pos, cell_y_pos)
                         .w_h(model.cell_width, model.cell_height)
@@ -253,9 +253,11 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for button in app.mouse.buttons.pressed() {
         match button {
             (MouseButton::Left, position) => {
-                model
-                    .field
-                    .reveal(&mouse_pos_to_field_pos(&position, model));
+                if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                    model
+                        .field
+                        .reveal(&position);
+                }
             }
             (MouseButton::Right, position) => println!("Floggn at {}", position),
             (_, _) => {}
@@ -291,9 +293,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
 }
 
 /// Converts the position of the mouse to the corresponding field position
-/// 
+///
 /// # Returns
-/// 
+///
 /// None if the position is outside of the [`Field`]
 fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
     let field_x = mouse_pos.x + model.field_margin_x;
@@ -301,7 +303,7 @@ fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
     let field_y = mouse_pos.y + model.field_margin_y;
     let cell_y = (field_y / model.cell_height) as u8;
 
-    if cell_x <= 0 || cell_x >= MAX_COLS || cell_y <= 0 || cell_y >= MAX_ROWS {
+    if cell_x == 0 || cell_x >= MAX_COLS || cell_y == 0 || cell_y >= MAX_ROWS {
         None
     } else {
         Some(Point2::new(cell_x as f32, cell_y as f32))
