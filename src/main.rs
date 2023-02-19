@@ -258,12 +258,17 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         match button {
             (MouseButton::Left, position) => {
                 if let Some(position) = mouse_pos_to_field_pos(&position, model) {
-                    model
-                        .field
-                        .reveal(&position);
+                    if model.field.get(position).is_revealed {
+                        model.field.reveal_neighbors(position);
+                    } 
+                    model.field.reveal(&position);
                 }
             }
-            (MouseButton::Right, position) => println!("Floggn at {}", position),
+            (MouseButton::Right, position) => {
+                if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                    model.field.toggle_flag(&position);
+                }
+            }
             (_, _) => {}
         }
     }
