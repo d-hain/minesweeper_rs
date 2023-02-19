@@ -175,9 +175,9 @@ impl Field {
     /// # Returns
     ///
     /// if the game has been won.
-    fn check_win(self) -> bool {
-        let flattened = self.0.into_iter().flatten().collect::<Vec<Cell>>();
-        flattened.iter().map(|e| e.is_bomb as u8).sum::<u8>() == BOMB_COUNT
+    fn check_win(&self) -> bool {
+        let flattened = self.0.iter().flatten().collect::<Vec<&Cell>>();
+        flattened.iter().map(|e| !e.is_revealed as u8).sum::<u8>() == BOMB_COUNT
     }
 
     /// Sets the bomb_count property of all [`Cell`]s that are no bombs.
