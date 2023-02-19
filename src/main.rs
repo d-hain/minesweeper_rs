@@ -159,7 +159,7 @@ impl Field {
                         draw.text(&cell.bomb_count.to_string())
                             .x_y(cell_x_pos, cell_y_pos)
                             .w_h(cell_width, cell_height)
-                            .font_size((cell_width/2.0) as u32 )
+                            .font_size((cell_width/2.0) as u32)
                             .align_text_middle_y()
                             .color(BLACK);
                     }
