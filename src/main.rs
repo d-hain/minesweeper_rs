@@ -163,8 +163,8 @@ impl Field {
         let remaining_window_width = window_rect.w() - field_width;
         let remaining_window_height = window_rect.h() - field_height;
 
-        
-        
+
+
         for (y, row) in self.0.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 // Construct Cell Rect
@@ -219,7 +219,7 @@ fn model(app: &App) -> Model {
 
     let mut field = Field::empty(MAX_ROWS, MAX_COLS);
     field.place_bombs(BOMB_COUNT);
-    
+
     Model {
         field,
     }
@@ -229,7 +229,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for button in app.mouse.buttons.pressed() {
         match button {
             (MouseButton::Left, position) => {
-                &mouse_pos_to_field_pos(&position, &model.field, &app.window_rect());
+                model.field.reveal(&mouse_pos_to_field_pos(&position, &model.field, &app.window_rect()));
             }
             (MouseButton::Right, position) => println!("Floggn at {}", position),
             (_, _) => {}
@@ -257,7 +257,7 @@ fn mouse_pos_to_field_pos(mouse_pos: &Point2, field: &Field, window_rect: &Rect)
     let field_height = cell_height * field.0.len() as f32;
     let remaining_window_width = window_rect.w() - field_width;
     let remaining_window_height = window_rect.h() - field_height;
-   
+
     let field_x = mouse_pos.x + remaining_window_width/2.;
     let cell_x = (field_x / cell_width) as u8;
     let field_y = mouse_pos.y + remaining_window_height / 2.0;
