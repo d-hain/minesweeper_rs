@@ -158,6 +158,8 @@ impl Field {
                 draw.rect()
                     .x_y(cell_x_pos, cell_y_pos)
                     .w_h(cell_width, cell_height)
+                    .stroke(BLACK)
+                    .stroke_weight(1.0)
                     .rgb(r, g, b);
                 if cell.bomb_count > 0 {
                     draw.text(&cell.bomb_count.to_string())
