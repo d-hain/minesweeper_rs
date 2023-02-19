@@ -114,6 +114,23 @@ impl Field {
         false
     }
 
+    fn reveal_neighbors(&mut self, pos: Point2) {
+        let neighbors = self.get_neighbor_positions(&pos);
+        if !(self.get(pos).bomb_count == self.count_surrounding_flags(&pos)) {
+            return;
+        }
+        for neighbor_pos in neighbors {
+            let neighbor = self.get(neighbor_pos);
+            if !neighbor.is_revealed && !neighbor.has_flag {
+                self.reveal(&neighbor_pos);
+            }
+        }
+    }
+
+    fn count_surrounding_flags(&self, pos: Point2) -> u8 {
+        self.get_neighbor_positions(&pos).iter().map(|e| self.get(*e).has_flag as u8).sum::<u8>()
+    }
+
     fn check_win(self) -> bool {
         let flattened = self.0.into_iter().flatten().collect::<Vec<Cell>>();
         flattened.iter().map(|e| e.is_bomb as u8).sum::<u8>() == BOMB_COUNT
