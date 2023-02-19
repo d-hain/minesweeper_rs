@@ -147,9 +147,9 @@ impl Field {
             .sum::<u8>()
     }
 
-    fn check_win(self) -> bool {
-        let flattened = self.0.into_iter().flatten().collect::<Vec<Cell>>();
-        flattened.iter().map(|e| e.is_bomb as u8).sum::<u8>() == BOMB_COUNT
+    fn check_win(&self) -> bool {
+        let flattened = self.0.iter().flatten().collect::<Vec<&Cell>>();
+        flattened.iter().map(|e| !e.is_revealed as u8).sum::<u8>() == BOMB_COUNT
     }
 
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
@@ -210,11 +210,22 @@ impl Field {
                 }
             }
         }
+        if model.won || model.lost {
+            let message = if model.won {"Wow! You won OMG MLG"} else {"looser"};
+            draw.text(message)
+            .x_y(0.0, model.field_height + model.field_margin_y)
+            .w_h(model.field_width, model.field_margin_y)
+            .font_size(model.cell_width as u32)
+            .align_text_middle_y()
+            .color(BLACK);
+        }
     }
 }
 
 struct Model {
     field: Field,
+    won: bool,
+    lost: bool,
     cell_width: f32,
     cell_height: f32,
     field_width: f32,
@@ -242,6 +253,8 @@ fn model(app: &App) -> Model {
 
     Model {
         field,
+        won: false,
+        lost: false,
         cell_width: 0.0,
         cell_height: 0.0,
         field_width: 0.0,
@@ -261,8 +274,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     if model.field.get(position).is_revealed {
                         model.field.reveal_neighbors(position);
                     } 
-                    model.field.reveal(&position);
+                    model.lost = model.field.reveal(&position);
                 }
+                model.won = model.field.check_win();
             }
             (MouseButton::Right, position) => {
                 if let Some(position) = mouse_pos_to_field_pos(&position, model) {
