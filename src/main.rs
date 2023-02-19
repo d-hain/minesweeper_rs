@@ -33,11 +33,7 @@ struct CellColor {
 
 impl CellColor {
     const fn new(r: f32, g: f32, b: f32) -> Self {
-        Self {
-            r,
-            g,
-            b,
-        }
+        Self { r, g, b }
     }
 }
 
@@ -75,7 +71,9 @@ impl Field {
                 rand_y = rand::thread_rng().gen_range(0..self.0.len());
                 rand_x = rand::thread_rng().gen_range(0..self.0[0].len());
                 cell = &mut self.0[rand_y][rand_x];
-                if !cell.is_bomb { break; }
+                if !cell.is_bomb {
+                    break;
+                }
             }
             cell.is_bomb = true;
         }
@@ -117,7 +115,12 @@ impl Field {
         if cell.bomb_count > 0 {
             return false;
         } else {
-            for neighbor_pos in self.get_neighbor_positions(&pos).iter().filter(|e| !self.get(**e).is_revealed).collect::<Vec<&Point2>>() {
+            for neighbor_pos in self
+                .get_neighbor_positions(&pos)
+                .iter()
+                .filter(|e| !self.get(**e).is_revealed)
+                .collect::<Vec<&Point2>>()
+            {
                 self.reveal(&neighbor_pos);
             }
         }
@@ -138,7 +141,10 @@ impl Field {
     }
 
     fn count_surrounding_flags(&self, pos: &Point2) -> u8 {
-        self.get_neighbor_positions(&pos).iter().map(|e| self.get(*e).has_flag as u8).sum::<u8>()
+        self.get_neighbor_positions(&pos)
+            .iter()
+            .map(|e| self.get(*e).has_flag as u8)
+            .sum::<u8>()
     }
 
     fn check_win(self) -> bool {
@@ -147,7 +153,10 @@ impl Field {
     }
 
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
-        self.get_neighbor_positions(&pos).iter().map(|pos| self.get(*pos).is_bomb as u8).sum::<u8>()
+        self.get_neighbor_positions(&pos)
+            .iter()
+            .map(|pos| self.get(*pos).is_bomb as u8)
+            .sum::<u8>()
     }
 
     fn set_bomb_counts(&mut self) {
@@ -155,7 +164,8 @@ impl Field {
         for (y, row) in self.0.iter_mut().enumerate() {
             for (x, cell) in row.iter_mut().enumerate() {
                 if !cell.is_bomb {
-                    cell.bomb_count = field.count_surrounding_bombs(Point2::new(x as f32, y as f32));
+                    cell.bomb_count =
+                        field.count_surrounding_bombs(Point2::new(x as f32, y as f32));
                 }
             }
         }
@@ -171,18 +181,11 @@ impl Field {
 
                 // Determine Cell color
                 let (mut r, mut g, mut b) = CELL_COLOR.into();
-                if cell.is_bomb { // && cell.is_revealed { // TODO: change to only visible when cell visible
+                if cell.is_bomb {
+                    // && cell.is_revealed { // TODO: change to only visible when cell visible
                     (r, g, b) = BOMB_COLOR.into();
                 } else if cell.is_revealed {
                     (r, g, b) = REVEALED_COLOR.into();
-                    if cell.bomb_count > 0 {
-                        draw.text(&cell.bomb_count.to_string())
-                            .x_y(cell_x_pos, cell_y_pos)
-                            .w_h(model.cell_width, model.cell_height)
-                            .font_size((model.cell_width / 2.0) as u32)
-                            .align_text_middle_y()
-                            .color(BLACK);
-                    }
                 }
 
                 // Draw the Cell
@@ -192,6 +195,15 @@ impl Field {
                     .stroke(BLACK)
                     .stroke_weight(1.0)
                     .rgb(r, g, b);
+
+                if cell.bomb_count > 0 && cell.is_revealed{
+                    draw.text(&cell.bomb_count.to_string())
+                        .x_y(cell_x_pos, cell_y_pos)
+                        .w_h(model.cell_width, model.cell_height)
+                        .font_size((model.cell_width / 2.0) as u32)
+                        .align_text_middle_y()
+                        .color(BLACK);
+                }
             }
         }
     }
@@ -223,7 +235,7 @@ fn model(app: &App) -> Model {
 
     let mut field = Field::empty(MAX_ROWS, MAX_COLS);
     field.place_bombs(BOMB_COUNT);
-    
+
     Model {
         field,
         cell_width: 0.0,
@@ -241,7 +253,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for button in app.mouse.buttons.pressed() {
         match button {
             (MouseButton::Left, position) => {
-                model.field.reveal(&mouse_pos_to_field_pos(&position, model));
+                model
+                    .field
+                    .reveal(&mouse_pos_to_field_pos(&position, model));
             }
             (MouseButton::Right, position) => println!("Floggn at {}", position),
             (_, _) => {}
