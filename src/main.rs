@@ -171,6 +171,10 @@ impl Field {
         }
     }
 
+    pub fn toggle_flag(&mut self, pos: &Point2) {
+
+    }
+
     /// Draw the [`Field`] in the middle of the `draw`.
     pub fn draw(&self, model: &Model, draw: &Draw) {
         for (y, row) in self.0.iter().enumerate() {
