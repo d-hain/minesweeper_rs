@@ -1,10 +1,11 @@
 use std::time::SystemTime;
 use nannou::prelude::*;
+use nannou::winit::event::VirtualKeyCode;
+use nannou_egui::{self, Egui, egui};
 use rand::Rng;
 
-const MAX_ROWS: u32 = 25;
-const MAX_COLS: u32 = 25;
-const BOMB_COUNT: u32 = (MAX_ROWS * MAX_COLS) / 10;
+const DEFAULT_FIELD_ROWS: u32 = 10;
+const DEFAULT_FIELD_COLS: u32 = 10;
 const CELL_COLOR: CellColor = CellColor::new(0.0, 1.0, 0.0);
 const BOMB_COLOR: CellColor = CellColor::new(1.0, 0.0, 0.0);
 const REVEALED_COLOR: CellColor = CellColor::new(0.69, 0.69, 0.69);
@@ -69,19 +70,38 @@ impl Field {
         &mut self.0[position.y as usize][position.x as usize]
     }
 
+    /// # Returns 
+    ///
+    /// the amount of columns in the [`Field`].
+    fn cols(&self) -> u32 {
+        self.0[0].len() as u32
+    }
+
+    /// # Returns 
+    ///
+    /// the amount of rows in the [`Field`].
+    fn rows(&self) -> u32 {
+        self.0.len() as u32
+    }
+
+    /// # Returns
+    ///
+    /// the bomb count calculated by rows and columns
+    fn bomb_count(&self) -> u32 {
+        (self.rows() * self.cols()) / 10
+    }
+
     /// Place the given `bomb_amount` at random points in the [`Field`].
-    pub fn place_bombs(&mut self, mut bomb_count: u32) {
-        if MAX_ROWS * MAX_COLS <= bomb_count {
-            bomb_count = (MAX_ROWS * MAX_COLS) / 15;
-        }
+    pub fn place_bombs(&mut self) {
+        let bomb_count = self.bomb_count();
 
         let mut rand_y;
         let mut rand_x;
         let mut cell;
         for _ in 0..bomb_count {
             loop {
-                rand_y = rand::thread_rng().gen_range(0..self.0.len());
-                rand_x = rand::thread_rng().gen_range(0..self.0[0].len());
+                rand_y = rand::thread_rng().gen_range(0..self.rows()) as usize;
+                rand_x = rand::thread_rng().gen_range(0..self.cols()) as usize;
                 cell = &mut self.0[rand_y][rand_x];
                 if !cell.is_bomb {
                     break;
@@ -100,7 +120,7 @@ impl Field {
         if position.x < 0.0 || position.y < 0.0 {
             return false;
         }
-        (position.x as u32) < MAX_COLS && (position.y as u32) < MAX_ROWS
+        (position.x as u32) < self.cols() && (position.y as u32) < self.rows()
     }
 
     /// Get the positions of the neighbors of the [`Cell`] at the given `position`.
@@ -144,16 +164,16 @@ impl Field {
     }
 
     /// Reveals all neighbors of the [`Cell`] at the given `position`
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// true if the player checked with incorrect flags.
     fn reveal_neighbors(&mut self, position: Point2) -> bool {
         let surrounding_flags = self.count_surrounding_flags(&position);
         if surrounding_flags == 0 {
             return false;
         }
-        
+
         let neighbors = self.get_neighbor_positions(&position);
         if self.get(position).bomb_count == self.count_surrounding_flags(&position)
             && !neighbors.iter().filter(|point| self.get(**point).is_bomb && !self.get(**point).has_flag).collect::<Vec<&Point2>>().is_empty() {
@@ -166,7 +186,7 @@ impl Field {
                 self.reveal(&neighbor_pos);
             }
         }
-        
+
         false
     }
 
@@ -202,7 +222,7 @@ impl Field {
     /// if the game has been won.
     fn check_win(&self) -> bool {
         let flattened = self.0.iter().flatten().collect::<Vec<&Cell>>();
-        flattened.iter().map(|e| !e.is_revealed as u32).sum::<u32>() == BOMB_COUNT
+        flattened.iter().map(|e| !e.is_revealed as u32).sum::<u32>() == self.bomb_count()
     }
 
     /// Sets the bomb_count property of all [`Cell`]s that are no bombs.
@@ -287,11 +307,14 @@ impl Field {
     }
 }
 
-#[derive(Debug)]
 struct Model {
+    egui: Egui,
     field: Field,
     won: bool,
     lost: bool,
+    settings_ready: bool,
+    field_rows: u32,
+    field_cols: u32,
     cell_width: f32,
     cell_height: f32,
     field_width: f32,
@@ -309,21 +332,29 @@ fn main() {
 
 /// Creates the window and sets up the [`Model`].
 fn model(app: &App) -> Model {
-    let _window_id = app
+    let window_id = app
         .new_window()
         .title("minesweeper_rs")
         .size(800, 800)
         .view(view)
+        .raw_event(raw_window_event)
         .build()
         .unwrap();
+    let window = app.window(window_id).unwrap();
 
-    let mut field = Field::empty(MAX_ROWS, MAX_COLS);
-    field.place_bombs(BOMB_COUNT);
+    let mut field = Field::empty(DEFAULT_FIELD_ROWS, DEFAULT_FIELD_COLS);
+    field.place_bombs();
+
+    let egui = Egui::from_window(&window);
 
     Model {
+        egui,
         field,
         won: false,
         lost: false,
+        settings_ready: false,
+        field_rows: DEFAULT_FIELD_ROWS,
+        field_cols: DEFAULT_FIELD_COLS,
         cell_width: 0.0,
         cell_height: 0.0,
         field_width: 0.0,
@@ -341,58 +372,82 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
     let window_rect = app.window_rect();
 
-    for button in app.mouse.buttons.pressed() {
-        match button {
-            (MouseButton::Left, position) => {
-                let time_now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("WHAT THE FUCK?").as_millis();
-                if time_now - model.last_left_click < 150 { break; }
+    if !model.settings_ready {
+        let egui = &mut model.egui;
+        let ctx = egui.begin_frame();
+        egui::Window::new("Settings").show(&ctx, |ui| {
+            ui.add(egui::Slider::new(&mut model.field_rows, 4..=42).text("Rows"));
+            ui.add(egui::Slider::new(&mut model.field_cols, 4..=42).text("Columns"));
 
-                model.last_left_click = time_now;
-                if let Some(position) = mouse_pos_to_field_pos(&position, model, &app.window_rect()) {
-                    if model.field.get(position).has_flag { break; }
+            if ui.button("Play").clicked() {
+                model.field = Field::empty(model.field_rows, model.field_cols);
+                model.field.place_bombs();
+                model.settings_ready = true;
+            }
+        });
+    } else {
+        for button in app.mouse.buttons.pressed() {
+            match button {
+                (MouseButton::Left, position) => {
+                    let time_now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("WHAT THE FUCK?").as_millis();
+                    if time_now - model.last_left_click < 150 { break; }
 
-                    if model.field.get(position).is_revealed {
-                        model.lost = model.field.reveal_neighbors(position);
-                    } else {
-                        model.lost = model.field.reveal(&position);
+                    model.last_left_click = time_now;
+                    if let Some(position) = mouse_pos_to_field_pos(&position, model, &app.window_rect()) {
+                        if model.field.get(position).has_flag { break; }
+
+                        if model.field.get(position).is_revealed {
+                            model.lost = model.field.reveal_neighbors(position);
+                        } else {
+                            model.lost = model.field.reveal(&position);
+                        }
+                    }
+                    model.won = model.field.check_win();
+
+                    if model.won || model.lost {
+                        model.field.reveal_all();
                     }
                 }
-                model.won = model.field.check_win();
+                (MouseButton::Right, position) => {
+                    let time_now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("WHAT THE FUCK?").as_millis();
+                    if time_now - model.last_right_click < 150 { break; }
 
-                if model.won || model.lost {
-                    model.field.reveal_all();
+                    model.last_right_click = time_now;
+                    if let Some(position) = mouse_pos_to_field_pos(&position, model, &app.window_rect()) {
+                        if model.field.get(position).is_revealed { break; }
+                        model.field.toggle_flag(&position);
+                    }
                 }
+                (_, _) => {}
             }
-            (MouseButton::Right, position) => {
-                let time_now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).expect("WHAT THE FUCK?").as_millis();
-                if time_now - model.last_right_click < 150 { break; }
-
-                model.last_right_click = time_now;
-                if let Some(position) = mouse_pos_to_field_pos(&position, model, &app.window_rect()) {
-                    if model.field.get(position).is_revealed { break; }
-                    model.field.toggle_flag(&position);
-                }
+        }
+        
+        for key in app.keys.down.iter() {
+            if key == &VirtualKeyCode::R { 
+                model.settings_ready = false 
             }
-            (_, _) => {}
         }
     }
 
     // Calculate Cell and Field sizes and save them
-    if window_rect.wh() != model.window_rect.wh() || model.cell_width == 0.0 {
-        let cell_width = (window_rect.w() * 0.8) / model.field.0.len() as f32;
-        let cell_height = (window_rect.h() * 0.8) / model.field.0.len() as f32;
-        let field_width = cell_width * (model.field.0.len() as f32 - 1.0);
-        let field_height = cell_height * (model.field.0.len() as f32 - 1.0);
-        let remaining_window_width = window_rect.w() - field_width;
-        let remaining_window_height = window_rect.h() - field_height;
+    let cell_width = (window_rect.w() * 0.8) / model.field.0.len() as f32;
+    let cell_height = (window_rect.h() * 0.8) / model.field.0.len() as f32;
+    let field_width = cell_width * (model.field.0.len() as f32 - 1.0);
+    let field_height = cell_height * (model.field.0.len() as f32 - 1.0);
+    let remaining_window_width = window_rect.w() - field_width;
+    let remaining_window_height = window_rect.h() - field_height;
 
-        model.cell_width = cell_width;
-        model.cell_height = cell_height;
-        model.field_width = field_width;
-        model.field_height = field_height;
-        model.field_margin_x = remaining_window_width / 2.0;
-        model.field_margin_y = remaining_window_height / 2.0;
-    }
+    model.cell_width = cell_width;
+    model.cell_height = cell_height;
+    model.field_width = field_width;
+    model.field_height = field_height;
+    model.field_margin_x = remaining_window_width / 2.0;
+    model.field_margin_y = remaining_window_height / 2.0;
+}
+
+fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event::WindowEvent) {
+    // Let egui handle things like keyboard and mouse input.
+    model.egui.handle_raw_event(event);
 }
 
 /// Draws once a frame to the window.
@@ -402,9 +457,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw = draw.x_y(-app.window_rect().w() * 0.5, -app.window_rect().h() * 0.5);
     draw.background().color(CORNFLOWERBLUE);
 
-    model.field.draw(model, &draw);
+    if model.settings_ready {
+        model.field.draw(model, &draw);
+    }
 
     draw.to_frame(app, &frame).unwrap();
+    if !model.settings_ready {
+        model.egui.draw_to_frame(&frame).unwrap();
+    }
 }
 
 /// Converts the position of the mouse to the corresponding field position.
@@ -418,7 +478,7 @@ fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model, window_rect: &Rect)
     let cell_x = (mouse_pos.x / model.cell_width) as i32;
     let cell_y = (mouse_pos.y / model.cell_height) as i32;
 
-    if cell_x >= MAX_COLS as i32 || cell_x < 0 || cell_y < 0 || cell_y >= MAX_ROWS as i32 {
+    if cell_x >= model.field.cols() as i32 || cell_x < 0 || cell_y < 0 || cell_y >= model.field.rows() as i32 {
         None
     } else {
         Some(Point2::new(cell_x as f32, cell_y as f32))
