@@ -130,7 +130,7 @@ impl Field {
         }
     }
 
-    fn count_surrounding_flags(&self, pos: Point2) -> u8 {
+    fn count_surrounding_flags(&self, pos: &Point2) -> u8 {
         self.get_neighbor_positions(&pos).iter().map(|e| self.get(*e).has_flag as u8).sum::<u8>()
     }
 
