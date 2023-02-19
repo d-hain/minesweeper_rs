@@ -117,14 +117,14 @@ impl Field {
 
 
     fn count_surrounding_bombs(&self, pos: Point2) -> u8 {
-        self.get_neighbor_positions(&pos).iter().map(|pos| self.get(*pos).is_bomb as u8).sum()
+        self.get_neighbor_positions(&pos).iter().map(|pos| self.get(*pos).is_bomb as u8).sum::<u8>()
     }
 
     fn set_bomb_counts(&mut self) {
-        let mut field = self.clone();
-        for (y, row) in field.0.iter_mut().enumerate() {
+        let field = self.clone();
+        for (y, row) in self.0.iter_mut().enumerate() {
             for (x, cell) in row.iter_mut().enumerate() {
-                cell.bomb_count = self.count_surrounding_bombs(Point2::new(x as f32, y as f32));
+                cell.bomb_count = field.count_surrounding_bombs(Point2::new(x as f32, y as f32));
             }
         }
     }
