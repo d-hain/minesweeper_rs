@@ -107,10 +107,13 @@ impl Field {
     pub fn reveal(&mut self, pos: &Point2) -> bool {
         let mut cell = self.get(*pos);
         cell.is_revealed = true;
+        if cell.is_bomb {
+            return true;
+        }
         if cell.bomb_count > 0 {
-            return cell.is_bomb;
+            return false;
         } else {
-            for neighbor_pos in self.get_neighbor_positions(&pos).iter() {
+            for neighbor_pos in self.get_neighbor_positions(&pos).iter().filter(|e| !self.get(**e).is_revealed).collect::<Vec<&Point2>>() {
                 self.reveal(neighbor_pos);
             }
         }
@@ -130,7 +133,7 @@ impl Field {
         }
     }
 
-    fn count_surrounding_flags(&self, pos: Point2) -> u8 {
+    fn count_surrounding_flags(&self, pos: &Point2) -> u8 {
         self.get_neighbor_positions(&pos).iter().map(|e| self.get(*e).has_flag as u8).sum::<u8>()
     }
 
