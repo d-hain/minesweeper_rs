@@ -1,4 +1,3 @@
-use nannou::image::Rgb;
 use nannou::prelude::*;
 use rand::Rng;
 
@@ -7,6 +6,7 @@ const MAX_COLS: u8 = 10;
 const BOMB_COUNT: u8 = 10;
 const CELL_COLOR: CellColor = CellColor::new(0.0, 1.0, 0.0);
 const BOMB_COLOR: CellColor = CellColor::new(1.0, 0.0, 0.0);
+const REVEALED_COLOR: CellColor = CellColor::new(0.69, 0.69, 0.69);
 
 #[derive(Default, Clone, Copy, Debug)]
 struct Cell {
@@ -43,7 +43,7 @@ impl CellColor {
 
 impl From<CellColor> for (f32, f32, f32) {
     fn from(value: CellColor) -> Self {
-        (value.r, value.g, value.g)
+        (value.r, value.g, value.b)
     }
 }
 
@@ -99,9 +99,12 @@ impl Field {
         neighbor_positions
     }
 
-    /// Reveals the given points Field
-    /// @return If cells is a bomb
-    pub fn reveal(&mut self, pos: &Point2) -> bool{
+    /// Reveals the given [`Point2`] in the [`Field`].
+    ///
+    /// # Returns
+    ///
+    /// if the [`Cell`] is a bomb
+    pub fn reveal(&mut self, pos: &Point2) -> bool {
         let mut cell = self.get(*pos);
         cell.is_revealed = true;
         if cell.bomb_count > 0 {
@@ -155,37 +158,42 @@ impl Field {
     pub fn draw(&self, window_rect: &Rect, draw: &Draw) {
         let cell_width = window_rect.w() / (self.0.len() as f32 * 2.0);
         let cell_height = window_rect.h() / (self.0.len() as f32 * 2.0);
-        let padding_x = 0.0;
-        let padding_y = 0.0;
-        let field_width = cell_width * (self.0.len() as f32-1.0) + padding_x * (self.0.len() as f32 - 1.0);
-        let field_height = cell_height * (self.0.len() as f32-1.0) + padding_y * (self.0.len() as f32 - 1.0);
+        let field_width = cell_width * (self.0.len() as f32-1.0);
+        let field_height = cell_height * (self.0.len() as f32-1.0);
         let remaining_window_width = window_rect.w() - field_width;
         let remaining_window_height = window_rect.h() - field_height;
 
+        
+        
         for (y, row) in self.0.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
-                let cell_x_pos = remaining_window_width / 2.0 + cell_width * x as f32 + padding_x * x as f32;
-                let cell_y_pos = remaining_window_height / 2.0 + cell_height * y as f32 + padding_y * y as f32;
+                // Construct Cell Rect
+                let cell_x_pos = remaining_window_width / 2.0 + cell_width * x as f32;
+                let cell_y_pos = remaining_window_height / 2.0 + cell_height * y as f32;
 
+                // Determine Cell color
                 let (mut r, mut g, mut b) = CELL_COLOR.into();
-                if cell.is_bomb {
+                if cell.is_bomb { // && cell.is_revealed { // TODO: change to only visible when cell visible
                     (r, g, b) = BOMB_COLOR.into();
+                } else if cell.is_revealed {
+                    (r, g, b) = REVEALED_COLOR.into();
+                    if cell.bomb_count > 0 {
+                        draw.text(&cell.bomb_count.to_string())
+                            .x_y(cell_x_pos, cell_y_pos)
+                            .w_h(cell_width, cell_height)
+                            .font_size((cell_width/2.0) as u32)
+                            .align_text_middle_y()
+                            .color(BLACK);
+                    }
                 }
 
+                // Draw the Cell
                 draw.rect()
                     .x_y(cell_x_pos, cell_y_pos)
                     .w_h(cell_width, cell_height)
                     .stroke(BLACK)
                     .stroke_weight(1.0)
                     .rgb(r, g, b);
-                if cell.bomb_count > 0 {
-                    draw.text(&cell.bomb_count.to_string())
-                        .x_y(cell_x_pos, cell_y_pos)
-                        .w_h(cell_width, cell_height)
-                        .font_size((cell_width/2.0) as u32 )
-                        .align_text_middle_y()
-                        .color(BLACK);
-                }
             }
         }
     }
@@ -211,12 +219,23 @@ fn model(app: &App) -> Model {
 
     let mut field = Field::empty(MAX_ROWS, MAX_COLS);
     field.place_bombs(BOMB_COUNT);
+    
     Model {
         field,
     }
 }
 
-fn update(_app: &App, model: &mut Model, _update: Update) {}
+fn update(app: &App, model: &mut Model, _update: Update) {
+    for button in app.mouse.buttons.pressed() {
+        match button {
+            (MouseButton::Left, position) => {
+                &mouse_pos_to_field_pos(&position, &model.field, &app.window_rect());
+            }
+            (MouseButton::Right, position) => println!("Floggn at {}", position),
+            (_, _) => {}
+        }
+    }
+}
 
 /// Draws once a frame to the window.
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -228,4 +247,21 @@ fn view(app: &App, model: &Model, frame: Frame) {
     model.field.draw(&app.window_rect(), &draw);
 
     draw.to_frame(app, &frame).unwrap();
+}
+
+fn mouse_pos_to_field_pos(mouse_pos: &Point2, field: &Field, window_rect: &Rect) ->  Point2 {
+    //TODO: temporary calculations
+    let cell_width = window_rect.w() / (field.0.len() as f32 * 2.0);
+    let cell_height = window_rect.h() / (field.0.len() as f32 * 2.0);
+    let field_width = cell_width * field.0.len() as f32;
+    let field_height = cell_height * field.0.len() as f32;
+    let remaining_window_width = window_rect.w() - field_width;
+    let remaining_window_height = window_rect.h() - field_height;
+   
+    let field_x = mouse_pos.x + remaining_window_width/2.;
+    let cell_x = (field_x / cell_width) as u8;
+    let field_y = mouse_pos.y + remaining_window_height / 2.0;
+    let cell_y = (field_y / cell_height) as u8;
+
+    Point2::new(cell_x as f32, cell_y as f32)
 }
