@@ -283,6 +283,7 @@ struct Model {
     field_margin_y: f32,
     last_left_click: u128,
     last_right_click: u128,
+    window_rect: Rect,
 }
 
 fn main() {
@@ -314,6 +315,7 @@ fn model(app: &App) -> Model {
         field_margin_y: 0.0,
         last_left_click: 0,
         last_right_click: 0,
+        window_rect: app.window_rect(),
     }
 }
 
@@ -358,19 +360,21 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     // Calculate Cell and Field sizes and save them
-    let cell_width = (window_rect.w() * 0.8) / model.field.0.len() as f32;
-    let cell_height = (window_rect.h() * 0.8) / model.field.0.len() as f32;
-    let field_width = cell_width * (model.field.0.len() as f32 - 1.0);
-    let field_height = cell_height * (model.field.0.len() as f32 - 1.0);
-    let remaining_window_width = window_rect.w() - field_width;
-    let remaining_window_height = window_rect.h() - field_height;
+    if window_rect.wh() != model.window_rect.wh() || model.cell_width == 0.0 {
+        let cell_width = (window_rect.w() * 0.8) / model.field.0.len() as f32;
+        let cell_height = (window_rect.h() * 0.8) / model.field.0.len() as f32;
+        let field_width = cell_width * (model.field.0.len() as f32 - 1.0);
+        let field_height = cell_height * (model.field.0.len() as f32 - 1.0);
+        let remaining_window_width = window_rect.w() - field_width;
+        let remaining_window_height = window_rect.h() - field_height;
 
-    model.cell_width = cell_width;
-    model.cell_height = cell_height;
-    model.field_width = field_width;
-    model.field_height = field_height;
-    model.field_margin_x = remaining_window_width / 2.0;
-    model.field_margin_y = remaining_window_height / 2.0;
+        model.cell_width = cell_width;
+        model.cell_height = cell_height;
+        model.field_width = field_width;
+        model.field_height = field_height;
+        model.field_margin_x = remaining_window_width / 2.0;
+        model.field_margin_y = remaining_window_height / 2.0;
+    }
 }
 
 /// Draws once a frame to the window.
@@ -379,7 +383,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // Change Origin Point to bottom left
     draw = draw.x_y(-app.window_rect().w() * 0.5, -app.window_rect().h() * 0.5);
     draw.background().color(CORNFLOWERBLUE);
-
+    
     model.field.draw(model, &draw);
 
     draw.to_frame(app, &frame).unwrap();
