@@ -270,6 +270,7 @@ impl Field {
     }
 }
 
+#[derive(Debug)]
 struct Model {
     field: Field,
     won: bool,
@@ -318,7 +319,7 @@ fn model(app: &App) -> Model {
 
 fn update(app: &App, model: &mut Model, _update: Update) {
     if model.lost || model.won { return; }
-    
+
     let window_rect = app.window_rect();
 
     for button in app.mouse.buttons.pressed() {
@@ -328,16 +329,16 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 if time_now - model.last_left_click < 150 { break; }
 
                 model.last_left_click = time_now;
-                if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                if let Some(position) = mouse_pos_to_field_pos(&position, model, &app.window_rect()) {
                     if model.field.get(position).has_flag { break; }
-                    
+
                     if model.field.get(position).is_revealed {
                         model.field.reveal_neighbors(position);
                     }
                     model.lost = model.field.reveal(&position);
                 }
                 model.won = model.field.check_win();
-                
+
                 if model.won || model.lost {
                     model.field.reveal_all();
                 }
@@ -347,7 +348,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 if time_now - model.last_right_click < 150 { break; }
 
                 model.last_right_click = time_now;
-                if let Some(position) = mouse_pos_to_field_pos(&position, model) {
+                if let Some(position) = mouse_pos_to_field_pos(&position, model, &app.window_rect()) {
                     if model.field.get(position).is_revealed { break; }
                     model.field.toggle_flag(&position);
                 }
@@ -357,8 +358,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     // Calculate Cell and Field sizes and save them
-    let cell_width = (window_rect.w() * 0.5) / model.field.0.len() as f32;
-    let cell_height = (window_rect.h() *  0.5) / model.field.0.len() as f32;
+    let cell_width = (window_rect.w() * 0.8) / model.field.0.len() as f32;
+    let cell_height = (window_rect.h() * 0.8) / model.field.0.len() as f32;
     let field_width = cell_width * (model.field.0.len() as f32 - 1.0);
     let field_height = cell_height * (model.field.0.len() as f32 - 1.0);
     let remaining_window_width = window_rect.w() - field_width;
@@ -389,13 +390,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
 /// # Returns
 ///
 /// [`None`] if the `mouse_pos` is outside of the [`Field`].
-fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
-    let field_x = mouse_pos.x + model.field_margin_x;
-    let cell_x = (field_x / model.cell_width - 0.5) as u32;
-    let field_y = mouse_pos.y + model.field_margin_y;
-    let cell_y = (field_y / model.cell_height - 0.5) as u32;
+fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model, window_rect: &Rect) -> Option<Point2> {
+    // Convert mouse_pos Origin Point to bottom left
+    let mouse_pos = Point2::new(mouse_pos.x + window_rect.w() / 2.0 - model.field_margin_x + model.cell_width / 2.0, mouse_pos.y + window_rect.h() / 2.0 - model.field_margin_y + model.cell_height / 2.0);
+    let cell_x = (mouse_pos.x / model.cell_width) as i32;
+    let cell_y = (mouse_pos.y / model.cell_height) as i32;
 
-    if cell_x >= MAX_COLS || cell_y >= MAX_ROWS {
+    if cell_x >= MAX_COLS as i32 || cell_x < 0 || cell_y < 0 || cell_y >= MAX_ROWS as i32 {
         None
     } else {
         Some(Point2::new(cell_x as f32, cell_y as f32))
