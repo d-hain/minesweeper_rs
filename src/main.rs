@@ -162,21 +162,12 @@ impl Field {
     }
 
     /// Draw the [`Field`] in the middle of the `draw`.
-    pub fn draw(&self, window_rect: &Rect, draw: &Draw) {
-        let cell_width = window_rect.w() / (self.0.len() as f32 * 2.0);
-        let cell_height = window_rect.h() / (self.0.len() as f32 * 2.0);
-        let field_width = cell_width * (self.0.len() as f32-1.0);
-        let field_height = cell_height * (self.0.len() as f32-1.0);
-        let remaining_window_width = window_rect.w() - field_width;
-        let remaining_window_height = window_rect.h() - field_height;
-
-
-
+    pub fn draw(&self, model: &Model, draw: &Draw) {
         for (y, row) in self.0.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {
                 // Construct Cell Rect
-                let cell_x_pos = remaining_window_width / 2.0 + cell_width * x as f32;
-                let cell_y_pos = remaining_window_height / 2.0 + cell_height * y as f32;
+                let cell_x_pos = model.field_margin_x + model.cell_width * x as f32;
+                let cell_y_pos = model.field_margin_y + model.cell_height * y as f32;
 
                 // Determine Cell color
                 let (mut r, mut g, mut b) = CELL_COLOR.into();
@@ -187,8 +178,8 @@ impl Field {
                     if cell.bomb_count > 0 {
                         draw.text(&cell.bomb_count.to_string())
                             .x_y(cell_x_pos, cell_y_pos)
-                            .w_h(cell_width, cell_height)
-                            .font_size((cell_width/2.0) as u32)
+                            .w_h(model.cell_width, model.cell_height)
+                            .font_size((model.cell_width / 2.0) as u32)
                             .align_text_middle_y()
                             .color(BLACK);
                     }
@@ -197,7 +188,7 @@ impl Field {
                 // Draw the Cell
                 draw.rect()
                     .x_y(cell_x_pos, cell_y_pos)
-                    .w_h(cell_width, cell_height)
+                    .w_h(model.cell_width, model.cell_height)
                     .stroke(BLACK)
                     .stroke_weight(1.0)
                     .rgb(r, g, b);
@@ -208,6 +199,12 @@ impl Field {
 
 struct Model {
     field: Field,
+    cell_width: f32,
+    cell_height: f32,
+    field_width: f32,
+    field_height: f32,
+    field_margin_x: f32,
+    field_margin_y: f32,
 }
 
 fn main() {
@@ -226,22 +223,45 @@ fn model(app: &App) -> Model {
 
     let mut field = Field::empty(MAX_ROWS, MAX_COLS);
     field.place_bombs(BOMB_COUNT);
-
+    
     Model {
         field,
+        cell_width: 0.0,
+        cell_height: 0.0,
+        field_width: 0.0,
+        field_height: 0.0,
+        field_margin_x: 0.0,
+        field_margin_y: 0.0,
     }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
+    let window_rect = app.window_rect();
+
     for button in app.mouse.buttons.pressed() {
         match button {
             (MouseButton::Left, position) => {
-                model.field.reveal(&mouse_pos_to_field_pos(&position, &model.field, &app.window_rect()));
+                model.field.reveal(&mouse_pos_to_field_pos(&position, model));
             }
             (MouseButton::Right, position) => println!("Floggn at {}", position),
             (_, _) => {}
         }
     }
+
+    // Calculate Cell and Field sizes and save them
+    let cell_width = window_rect.w() / (model.field.0.len() as f32 * 2.0);
+    let cell_height = window_rect.h() / (model.field.0.len() as f32 * 2.0);
+    let field_width = cell_width * (model.field.0.len() as f32 - 1.0);
+    let field_height = cell_height * (model.field.0.len() as f32 - 1.0);
+    let remaining_window_width = window_rect.w() - field_width;
+    let remaining_window_height = window_rect.h() - field_height;
+
+    model.cell_width = cell_width;
+    model.cell_height = cell_height;
+    model.field_width = field_width;
+    model.field_height = field_height;
+    model.field_margin_x = remaining_window_width / 2.0;
+    model.field_margin_y = remaining_window_height / 2.0;
 }
 
 /// Draws once a frame to the window.
@@ -251,24 +271,17 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw = draw.x_y(-app.window_rect().w() * 0.5, -app.window_rect().h() * 0.5);
     draw.background().color(CORNFLOWERBLUE);
 
-    model.field.draw(&app.window_rect(), &draw);
+    model.field.draw(model, &draw);
 
     draw.to_frame(app, &frame).unwrap();
 }
 
-fn mouse_pos_to_field_pos(mouse_pos: &Point2, field: &Field, window_rect: &Rect) ->  Point2 {
-    //TODO: temporary calculations
-    let cell_width = window_rect.w() / (field.0.len() as f32 * 2.0);
-    let cell_height = window_rect.h() / (field.0.len() as f32 * 2.0);
-    let field_width = cell_width * field.0.len() as f32;
-    let field_height = cell_height * field.0.len() as f32;
-    let remaining_window_width = window_rect.w() - field_width;
-    let remaining_window_height = window_rect.h() - field_height;
-
-    let field_x = mouse_pos.x + remaining_window_width/2.;
-    let cell_x = (field_x / cell_width) as u8;
-    let field_y = mouse_pos.y + remaining_window_height / 2.0;
-    let cell_y = (field_y / cell_height) as u8;
+/// Converts the position of the mouse to the corresponding field position
+fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Point2 {
+    let field_x = mouse_pos.x + model.field_margin_x;
+    let cell_x = (field_x / model.cell_width) as u8;
+    let field_y = mouse_pos.y + model.field_margin_y;
+    let cell_y = (field_y / model.cell_height) as u8;
 
     Point2::new(cell_x as f32, cell_y as f32)
 }
