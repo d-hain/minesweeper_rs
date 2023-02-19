@@ -310,7 +310,6 @@ fn mouse_pos_to_field_pos(mouse_pos: &Point2, model: &Model) -> Option<Point2> {
     if cell_x >= MAX_COLS || cell_y >= MAX_ROWS {
         None
     } else {
-        dbg!(Point2::new(cell_x as f32, cell_y as f32));
         Some(Point2::new(cell_x as f32, cell_y as f32))
     }
 }
