@@ -368,6 +368,8 @@ fn model(app: &App) -> Model {
 fn update(app: &App, model: &mut Model, _update: Update) {
     for key in app.keys.down.iter() {
         if key == &VirtualKeyCode::R {
+            model.lost = false;
+            model.won = false;
             model.settings_ready = false
         }
     }
