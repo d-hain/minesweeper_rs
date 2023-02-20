@@ -323,7 +323,6 @@ struct Model {
     field_margin_y: f32,
     last_left_click: u128,
     last_right_click: u128,
-    window_rect: Rect,
 }
 
 fn main() {
@@ -363,11 +362,15 @@ fn model(app: &App) -> Model {
         field_margin_y: 0.0,
         last_left_click: 0,
         last_right_click: 0,
-        window_rect: app.window_rect(),
     }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
+    for key in app.keys.down.iter() {
+        if key == &VirtualKeyCode::R {
+            model.settings_ready = false
+        }
+    }
     if model.lost || model.won { return; }
 
     let window_rect = app.window_rect();
@@ -419,12 +422,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     }
                 }
                 (_, _) => {}
-            }
-        }
-        
-        for key in app.keys.down.iter() {
-            if key == &VirtualKeyCode::R { 
-                model.settings_ready = false 
             }
         }
     }
